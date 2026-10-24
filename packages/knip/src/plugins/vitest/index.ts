@@ -11,9 +11,19 @@ import { basename, isAbsolute, isInternal, join, toAbsolute, toPosix } from '../
 import { hasDependency } from '../../util/plugin.ts';
 import { resolveExtendedConfig } from '../oxlint/index.ts';
 import { getHtmlScriptEntries, getIndexHtmlEntries } from '../vite/helpers.ts';
-import { getAliasInputs, getEnvSpecifier, getExternalReporters } from './helpers.ts';
+import { getAliasInputs, getExternalReporters, toEnvDependency } from './helpers.ts';
 import { createVitestMockVisitor } from './visitors/mock.ts';
-import type { AliasOptions, COMMAND, MODE, ViteConfig, ViteConfigOrFn, VitestWorkspaceConfig } from './types.ts';
+import type {
+  AliasOptions,
+  COMMAND,
+  MODE,
+  Options,
+  ViteConfig,
+  ViteConfigOrFn,
+  VitestProject,
+  VitestProjectConfig,
+  VitestWorkspaceConfig,
+} from './types.ts';
 
 // https://vitest.dev/config/
 
@@ -37,6 +47,9 @@ const entry = [...testEntry, ...mocks];
 
 const benchmark = ['**/*.bench.?(c|m)[jt]s?(x)'];
 
+const isProjectConfig = (project: string | VitestProject): project is VitestProjectConfig =>
+  typeof project === 'object' && !(project instanceof Promise);
+
 const findConfigDependencies = (localConfig: ViteConfig, options: PluginOptions, vitestRoot: string) => {
   const testConfig = localConfig.test;
 
@@ -44,11 +57,7 @@ const findConfigDependencies = (localConfig: ViteConfig, options: PluginOptions,
 
   const env = testConfig.environment;
   const environments =
-    env && env !== 'node'
-      ? isInternal(env) || isAbsolute(env)
-        ? [toDeferResolve(env)]
-        : [toDependency(getEnvSpecifier(env))]
-      : [];
+    env && env !== 'node' ? (isInternal(env) || isAbsolute(env) ? [toDeferResolve(env)] : [toEnvDependency(env)]) : [];
   const reporters = getExternalReporters(testConfig.reporters).map(specifier =>
     isInternal(specifier) || isAbsolute(specifier)
       ? { ...toDeferResolve(specifier), dir: vitestRoot }
@@ -79,7 +88,7 @@ const findConfigDependencies = (localConfig: ViteConfig, options: PluginOptions,
   const projectsDependencies: Input[] = [];
   if (testConfig.projects !== undefined) {
     for (const projectConfig of testConfig.projects) {
-      if (typeof projectConfig !== 'string') {
+      if (isProjectConfig(projectConfig)) {
         projectsDependencies.push(...findConfigDependencies(projectConfig, options, vitestRoot));
       }
     }
@@ -112,27 +121,28 @@ const getConfigs = async (localConfig: ViteConfigOrFn | VitestWorkspaceConfig) =
           for (const mode of ['development', 'production'] as MODE[]) {
             for (const isSsrBuild of command === 'build' ? [undefined, false, true] : [undefined]) {
               const cfg = await config({ command, mode, isSsrBuild, ssrBuild: isSsrBuild });
-              configs.push(cfg);
-              if (cfg.test?.projects) {
-                for (const project of cfg.test.projects) {
-                  if (typeof project !== 'string') {
-                    configs.push(project);
-                  }
-                }
-              }
+              configs.push(cfg, ...(await getProjectConfigs(cfg, command === 'serve' && mode === 'development')));
             }
           }
         }
       } else {
-        configs.push(config);
-        if (config.test?.projects) {
-          for (const project of config.test.projects) {
-            if (typeof project !== 'string') {
-              configs.push(project);
-            }
-          }
-        }
+        configs.push(config, ...(await getProjectConfigs(config)));
       }
+    }
+  }
+  return configs;
+};
+
+// Vitest calls project functions once, with this env
+const projectEnv: Options = { command: 'serve', mode: 'test', isPreview: false, isSsrBuild: false };
+
+const getProjectConfigs = async (config: ViteConfig, isCallFunctions = true) => {
+  const configs: ViteConfig[] = [];
+  if (config.test?.projects) {
+    for (const project of config.test.projects) {
+      if (typeof project === 'function') {
+        if (isCallFunctions) configs.push(await project(projectEnv));
+      } else if (typeof project !== 'string') configs.push(await project);
     }
   }
   return configs;
@@ -150,7 +160,8 @@ export const resolveConfig: ResolveConfig<ViteConfigOrFn | VitestWorkspaceConfig
   for (const cfg of configs) {
     for (const project of cfg.test?.projects ?? []) {
       if (typeof project === 'string') patterns.add(project);
-      else if (typeof project.extends === 'string') inputs.add(toConfig('vitest', project.extends));
+      else if (isProjectConfig(project) && typeof project.extends === 'string')
+        inputs.add(toConfig('vitest', project.extends));
     }
   }
 
@@ -280,7 +291,7 @@ const args: Args = {
       }
     }
     if (parsed['environment'] && parsed['environment'] !== 'node') {
-      inputs.push(toDependency(getEnvSpecifier(parsed['environment'])));
+      inputs.push(toEnvDependency(parsed['environment']));
     }
     if (typeof parsed['typecheck'] === 'object' && parsed['typecheck'].checker) {
       inputs.push(toDependency(parsed['typecheck'].checker === 'tsc' ? 'typescript' : parsed['typecheck'].checker));
