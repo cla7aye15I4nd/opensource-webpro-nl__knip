@@ -56,6 +56,7 @@ export type PluginName =
   | 'jest'
   | 'karma'
   | 'knex'
+  | 'kysely-codegen'
   | 'ladle'
   | 'laravel-vite-plugin'
   | 'lefthook'
@@ -68,6 +69,7 @@ export type PluginName =
   | 'lunaria'
   | 'markdownlint'
   | 'marko'
+  | 'mastra'
   | 'mcp'
   | 'mdx'
   | 'mdxlint'
@@ -114,6 +116,7 @@ export type PluginName =
   | 'preconstruct'
   | 'prettier'
   | 'prisma'
+  | 'purgecss'
   | 'quasar'
   | 'qwik'
   | 'railway'
@@ -257,6 +260,7 @@ export const pluginNames = [
   'jest',
   'karma',
   'knex',
+  'kysely-codegen',
   'ladle',
   'laravel-vite-plugin',
   'lefthook',
@@ -269,6 +273,7 @@ export const pluginNames = [
   'lunaria',
   'markdownlint',
   'marko',
+  'mastra',
   'mcp',
   'mdx',
   'mdxlint',
@@ -315,6 +320,7 @@ export const pluginNames = [
   'preconstruct',
   'prettier',
   'prisma',
+  'purgecss',
   'quasar',
   'qwik',
   'railway',

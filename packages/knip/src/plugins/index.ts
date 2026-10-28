@@ -55,6 +55,7 @@ import { default as jasmine } from './jasmine/index.ts';
 import { default as jest } from './jest/index.ts';
 import { default as karma } from './karma/index.ts';
 import { default as knex } from './knex/index.ts';
+import { default as kyselyCodegen } from './kysely-codegen/index.ts';
 import { default as ladle } from './ladle/index.ts';
 import { default as laravelVitePlugin } from './laravel-vite-plugin/index.ts';
 import { default as lefthook } from './lefthook/index.ts';
@@ -67,6 +68,7 @@ import { default as lostPixel } from './lost-pixel/index.ts';
 import { default as lunaria } from './lunaria/index.ts';
 import { default as markdownlint } from './markdownlint/index.ts';
 import { default as marko } from './marko/index.ts';
+import { default as mastra } from './mastra/index.ts';
 import { default as mcp } from './mcp/index.ts';
 import { default as mdx } from './mdx/index.ts';
 import { default as mdxlint } from './mdxlint/index.ts';
@@ -113,6 +115,7 @@ import { default as preCommit } from './pre-commit/index.ts';
 import { default as preconstruct } from './preconstruct/index.ts';
 import { default as prettier } from './prettier/index.ts';
 import { default as prisma } from './prisma/index.ts';
+import { default as purgecss } from './purgecss/index.ts';
 import { default as quasar } from './quasar/index.ts';
 import { default as qwik } from './qwik/index.ts';
 import { default as railway } from './railway/index.ts';
@@ -256,6 +259,7 @@ export const Plugins = {
   jest,
   karma,
   knex,
+  'kysely-codegen': kyselyCodegen,
   ladle,
   'laravel-vite-plugin': laravelVitePlugin,
   lefthook,
@@ -268,6 +272,7 @@ export const Plugins = {
   lunaria,
   markdownlint,
   marko,
+  mastra,
   mcp,
   mdx,
   mdxlint,
@@ -314,6 +319,7 @@ export const Plugins = {
   preconstruct,
   prettier,
   prisma,
+  purgecss,
   quasar,
   qwik,
   railway,
