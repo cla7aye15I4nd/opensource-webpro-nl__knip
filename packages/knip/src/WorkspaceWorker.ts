@@ -26,6 +26,7 @@ import { compact } from './util/array.ts';
 import type { MainOptions } from './util/create-options.ts';
 import { debugLog, debugLogArray, debugLogObject } from './util/debug.ts';
 import { _glob, hasNoProductionSuffix, hasProductionSuffix, negate } from './util/glob.ts';
+import { expandIgnorePatterns } from './util/parse-and-convert-gitignores.ts';
 import {
   type ConfigInput,
   type Input,
@@ -220,9 +221,15 @@ export class WorkspaceWorker {
     return patterns;
   }
 
-  getPluginEntryFilePatterns(patterns: string[]) {
+  getPluginEntryFilePatterns(patterns: string[], base?: string) {
     const negateWorkspaces = patterns.some(pattern => pattern.startsWith('**/')) ? this.negatedWorkspacePatterns : [];
-    return [patterns, negateWorkspaces, this.ignoredWorkspacePatterns.map(negate)].flat();
+    // Patterns resolved from a base of their own start inside it, where a negated directory alone never prunes the crawl
+    const prefix = `${this.name}/`;
+    const toWorkspaceRelative = (name: string) => (name.startsWith(prefix) ? name.slice(prefix.length) : name);
+    const ignoredWorkspaces = base
+      ? expandIgnorePatterns(this.ignoredWorkspacePatterns.map(toWorkspaceRelative))
+      : this.ignoredWorkspacePatterns;
+    return [patterns, negateWorkspaces, ignoredWorkspaces.map(negate)].flat();
   }
 
   getProductionEntryFilePatterns() {
@@ -314,9 +321,7 @@ export class WorkspaceWorker {
     const [productionScripts, developmentScripts] = getFilteredScripts(manifest.scripts ?? {});
     const inputsFromManifest = _getInputsFromScripts(Object.values(developmentScripts), baseOptions);
     const productionInputsFromManifest = _getInputsFromScripts(Object.values(productionScripts), baseOptions);
-
-    const hasProductionInput = (input: Input) =>
-      productionInputsFromManifest.find(d => d.specifier === input.specifier && d.type === input.type);
+    for (const input of productionInputsFromManifest) input.production = true;
 
     const createGetInputsFromScripts =
       (containingFilePath: string): GetInputsFromScriptsPartial =>
@@ -368,7 +373,7 @@ export class WorkspaceWorker {
         inputs.push({ ...input, containingFilePath: inputContainingFilePath });
       } else if (isConfig(input)) {
         storeConfigFilePath(input.pluginName, { ...input, containingFilePath: inputContainingFilePath });
-      } else if (!isProduction || (isProduction && (input.production || hasProductionInput(input)))) {
+      } else if (!isProduction || input.production) {
         inputs.push({ ...input, containingFilePath: inputContainingFilePath });
       }
     }
@@ -527,8 +532,10 @@ export class WorkspaceWorker {
         for (const id of dependencies) addInput(id, id.containingFilePath ?? containingFilePath);
       }
 
-      // Any negated pattern will move all plugin inputs to new group
-      if (inputs.some(input => input.specifier.startsWith('!'))) for (const input of inputs) input.group = pluginName;
+      // Any negated pattern will move all plugin inputs to new group, except config files (a plugin may exclude its own)
+      if (inputs.some(input => input.specifier.startsWith('!'))) {
+        for (const input of inputs) if (!seenConfigFiles.has(input.specifier)) input.group = pluginName;
+      }
 
       return inputs;
     };

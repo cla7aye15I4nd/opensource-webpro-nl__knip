@@ -2,7 +2,6 @@ import type { IsPluginEnabled, Plugin, ResolveConfig } from '../../types/config.
 import { isFile } from '../../util/fs.ts';
 import type { Input } from '../../util/input.ts';
 import { toConfig } from '../../util/input.ts';
-import { join, relative } from '../../util/path.ts';
 import type { TaskfileCommand, TaskfileConfig, TaskfileTask } from './types.ts';
 
 // https://taskfile.dev/
@@ -88,7 +87,7 @@ const extractScriptsFromTask = (task: TaskfileTask): string[] => {
 const resolveConfig: ResolveConfig<TaskfileConfig> = async (localConfig, options) => {
   if (!localConfig || !options.configFilePath) return [];
 
-  const { getInputsFromScripts, isProduction, configFileDir } = options;
+  const { getInputsFromScripts, isProduction, configFileDir, cwd } = options;
   const inputs: Input[] = [];
 
   if (localConfig.includes && typeof localConfig.includes === 'object') {
@@ -99,10 +98,7 @@ const resolveConfig: ResolveConfig<TaskfileConfig> = async (localConfig, options
           : includeValue && typeof includeValue === 'object' && 'taskfile' in includeValue
             ? includeValue.taskfile
             : undefined;
-      if (includePath) {
-        const resolvedPath = join(configFileDir, includePath);
-        inputs.push(toConfig('taskfile', relative(configFileDir, resolvedPath)));
-      }
+      if (includePath) inputs.push(toConfig('taskfile', includePath));
     }
   }
 
@@ -111,7 +107,7 @@ const resolveConfig: ResolveConfig<TaskfileConfig> = async (localConfig, options
       for (const script of extractScriptsFromTask(task)) {
         for (const input of getInputsFromScripts([script], { optionalBinaries: true })) {
           if (isProduction) Object.assign(input, { optional: true });
-          inputs.push({ ...input, dir: configFileDir });
+          inputs.push({ ...input, dir: input.type === 'entry' ? cwd : configFileDir });
         }
       }
     }

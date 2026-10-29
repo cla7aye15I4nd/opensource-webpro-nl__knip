@@ -10,7 +10,7 @@ import {
   toDeferResolveProductionEntry,
   toDependency,
 } from '../../util/input.ts';
-import { extname, isInternal, join, toAbsolute } from '../../util/path.ts';
+import { extname, isInternal, join } from '../../util/path.ts';
 import { hasDependency } from '../../util/plugin.ts';
 import { getDependenciesFromConfig } from '../babel/index.ts';
 import type { BabelConfigObj } from '../babel/types.ts';
@@ -68,6 +68,8 @@ const resolveRuleSetDependencies = (rule: RuleSetRule | undefined | null | false
     const d = getDependenciesFromConfig((rule as { options: BabelConfigObj }).options).map(d => d.specifier);
     return [useItem, ...d];
   }
+  if (typeof useItem === 'string' && useItem && rule.options && rule.use == null)
+    useItem = { loader: useItem, options: rule.options };
   return [useItem].flat().flatMap((item: RuleSetRule | RuleSetUseItem | undefined | null | false | 0) => {
     if (!item) return [];
     if (hasBabelOptions(item)) {
@@ -171,7 +173,7 @@ export const findWebpackDependenciesFromConfig: ResolveConfig<WebpackConfig> = a
           } else {
             if (alias.length > 1) inputs.add(toAlias(alias, prefixes));
             for (const prefix of prefixes) {
-              inputs.add(toAlias(addStar(alias), [addStar(toAbsolute(prefix, options.configFileDir))]));
+              inputs.add(toAlias(addStar(alias), [addStar(prefix)], { dir: options.configFileDir }));
             }
           }
         }
