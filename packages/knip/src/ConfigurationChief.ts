@@ -12,7 +12,7 @@ import type {
   WorkspaceConfiguration,
 } from './types/config.ts';
 import type { ConfigurationHint } from './types/issues.ts';
-import { type PluginName, pluginNames } from './types/PluginNames.ts';
+import type { PluginName } from './types/PluginNames.ts';
 import type { WorkspacePackage } from './types/package-json.ts';
 import { arrayify, compact, partition } from './util/array.ts';
 import type { MainOptions } from './util/create-options.ts';
@@ -20,6 +20,7 @@ import { createWorkspaceGraph, type WorkspaceGraph } from './util/create-workspa
 import { isDirectory, isFile } from './util/fs.ts';
 import { _dirGlob, prependDirToPattern, removeProductionSuffix } from './util/glob.ts';
 import { graphSequencer } from './util/graph-sequencer.ts';
+import { isPluginName } from './util/is-plugin-name.ts';
 import mapWorkspaces from './util/map-workspaces.ts';
 import { join, relative } from './util/path.ts';
 import { normalizePluginConfig } from './util/plugin.ts';
@@ -46,8 +47,6 @@ const getDefaultWorkspaceConfig = (extensions: string[] = []) => {
     project: [`**/*.{${exts}}!`],
   };
 };
-
-const isPluginName = (name: string): name is PluginName => pluginNames.includes(name as PluginName);
 
 const defaultConfig: Configuration = {
   ignore: [],
@@ -155,7 +154,7 @@ export class ConfigurationChief {
     const rootPluginConfigs: Partial<PluginsConfiguration> = {};
 
     for (const [pluginName, pluginConfig] of Object.entries(rawConfig)) {
-      if (isPluginName(pluginName)) {
+      if (isPluginName(pluginName) && pluginConfig !== undefined) {
         rootPluginConfigs[pluginName] = normalizePluginConfig(pluginConfig as RawPluginConfiguration);
       }
     }
@@ -444,7 +443,7 @@ export class ConfigurationChief {
     }
 
     for (const [pluginName, pluginConfig] of Object.entries(workspaceConfig)) {
-      if (isPluginName(pluginName)) {
+      if (isPluginName(pluginName) && pluginConfig !== undefined) {
         plugins[pluginName] = normalizePluginConfig(pluginConfig as RawPluginConfiguration);
       }
     }
