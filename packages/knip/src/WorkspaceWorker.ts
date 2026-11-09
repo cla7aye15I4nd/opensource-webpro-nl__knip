@@ -1,5 +1,6 @@
 import picomatch from 'picomatch';
 import { _getInputsFromScripts } from './binaries/index.ts';
+import { getScriptCommands } from './binaries/plugins.ts';
 import { CacheConsultant } from './CacheConsultant.ts';
 import { isDefaultPattern, type Workspace } from './ConfigurationChief.ts';
 import { DEFAULT_EXTENSIONS, ROOT_WORKSPACE_NAME } from './constants.ts';
@@ -53,6 +54,7 @@ type WorkspaceManagerOptions = {
   config: WorkspaceConfiguration;
   manifest: PackageJson;
   dependencies: DependencySet;
+  allDependencies: DependencySet;
   rootManifest: Manifest | undefined;
   handleInput: HandleInput;
   handleConfigLoadError: () => void;
@@ -84,6 +86,7 @@ export class WorkspaceWorker {
   manifest: Manifest;
   rootManifest: Manifest | undefined;
   dependencies: DependencySet;
+  allDependencies: DependencySet;
   handleInput: HandleInput;
   handleConfigLoadError: () => void;
   findWorkspaceByFilePath: (filePath: string) => Workspace | undefined;
@@ -110,6 +113,7 @@ export class WorkspaceWorker {
     config,
     manifest,
     dependencies,
+    allDependencies,
     rootManifest,
     negatedWorkspacePatterns,
     ignoredWorkspacePatterns,
@@ -130,6 +134,7 @@ export class WorkspaceWorker {
     this.manifest = createManifest(manifest);
     this.rootManifest = rootManifest;
     this.dependencies = dependencies;
+    this.allDependencies = allDependencies;
     this.negatedWorkspacePatterns = negatedWorkspacePatterns;
     this.ignoredWorkspacePatterns = ignoredWorkspacePatterns;
     this.enabledPluginsInAncestors = enabledPluginsInAncestors;
@@ -169,7 +174,13 @@ export class WorkspaceWorker {
       if (
         isEnabledInAncestor ||
         (typeof plugin.isEnabled === 'function' &&
-          (await plugin.isEnabled({ cwd: this.dir, manifest, dependencies: this.dependencies, config: this.config })))
+          (await plugin.isEnabled({
+            cwd: this.dir,
+            manifest,
+            dependencies: this.dependencies,
+            config: this.config,
+            getScriptCommands,
+          })))
       ) {
         this.enabledPluginsMap[pluginName] = true;
         enabledPlugins.push(pluginName);
@@ -275,7 +286,7 @@ export class WorkspaceWorker {
       if (!plugin.registerCompilers) continue;
       if (this.config[pluginName] === false) continue;
       if (this.options.cwd !== this.dir && plugin.isRootOnly) continue;
-      await plugin.registerCompilers({ cwd, hasDependency, registerCompiler });
+      await plugin.registerCompilers({ cwd, dependencies: this.allDependencies, hasDependency, registerCompiler });
     }
   }
 
@@ -320,7 +331,7 @@ export class WorkspaceWorker {
     const baseOptions = { manifest, rootManifest, cwd, rootCwd, containingFilePath, getManifest };
 
     // Get dependencies from package.json#scripts
-    const baseScriptOptions = { ...baseOptions, isProduction, enabledPlugins: this.enabledPlugins };
+    const baseScriptOptions = { ...baseOptions, isProduction, enabledPlugins: this.enabledPlugins, getScriptCommands };
     const [productionScripts, developmentScripts] = getFilteredScripts(manifest.scripts ?? {});
     const inputsFromManifest = _getInputsFromScripts(Object.values(developmentScripts), baseOptions);
     const productionInputsFromManifest = _getInputsFromScripts(Object.values(productionScripts), baseOptions);

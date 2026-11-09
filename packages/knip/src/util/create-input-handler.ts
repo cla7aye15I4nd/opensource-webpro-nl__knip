@@ -15,7 +15,7 @@ import {
   isDependency,
   toDebugString,
 } from './input.ts';
-import { getPackageNameFromSpecifier } from './modules.ts';
+import { getPackageNameFromFilePath, getPackageNameFromSpecifier } from './modules.ts';
 import { dirname, isAbsolute, isInNodeModules, isInternal, join } from './path.ts';
 import { _resolveModuleSync, _resolveSync, resolvePackageManifestPath } from './resolve.ts';
 
@@ -147,27 +147,37 @@ export const createInputHandler =
       }
     }
 
-    if (isDeferResolve(input) && deputy.isProduction && !input.production) {
-      return;
-    }
-
     // oxc-resolver does not resolve "file" or "file.ts" without "./" so we best-guess-absolutify
     const filePath = isJoinable(specifier) ? join(input.dir ?? dirname(containingFilePath), specifier) : specifier;
-    const resolvedFilePath = _resolveModuleSync(filePath, basePath);
+    const resolvedFilePath =
+      _resolveModuleSync(filePath, basePath) ??
+      (filePath === specifier ? undefined : _resolveModuleSync(specifier, basePath));
 
     if (resolvedFilePath && isInternal(resolvedFilePath)) {
       return isGitIgnored(resolvedFilePath) ? undefined : resolvedFilePath;
     }
 
-    if (input.optional) return;
+    if (input.optional || (isDeferResolve(input) && deputy.isProduction && !input.production)) return;
 
-    if (!isInternal(filePath)) {
+    if (resolvedFilePath || !isInternal(filePath)) {
+      const name = resolvedFilePath ? getPackageNameFromFilePath(resolvedFilePath) : packageName;
+      const inputWorkspace = getWorkspaceFor(input, chief, workspace);
+      if (
+        name &&
+        deputy.maybeAddReferencedExternalDependency(inputWorkspace, name, {
+          specifier,
+          isDevOnly: isConfig(input),
+          isTypeOnly: input.isTypeOnly,
+        })
+      ) {
+        return;
+      }
       addIssue({
         type: 'unlisted',
         filePath: containingFilePath,
         workspace: workspace.name,
-        symbol: packageName ?? specifier,
-        specifier: packageName ?? specifier,
+        symbol: name ?? specifier,
+        specifier: name ?? specifier,
         fixes: [],
       });
     } else if (!isGitIgnored(filePath)) {
