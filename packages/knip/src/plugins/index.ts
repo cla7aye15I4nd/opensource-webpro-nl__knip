@@ -130,6 +130,7 @@ import { default as relay } from './relay/index.ts';
 import { default as releaseIt } from './release-it/index.ts';
 import { default as remark } from './remark/index.ts';
 import { default as remix } from './remix/index.ts';
+import { default as retryCli } from './retry-cli/index.ts';
 import { default as rolldown } from './rolldown/index.ts';
 import { default as rollup } from './rollup/index.ts';
 import { default as rsbuild } from './rsbuild/index.ts';
@@ -194,6 +195,7 @@ import { default as vitePwaAssetsGenerator } from './vite-pwa-assets-generator/i
 import { default as vitepress } from './vitepress/index.ts';
 import { default as vitest } from './vitest/index.ts';
 import { default as vue } from './vue/index.ts';
+import { default as webTestRunner } from './web-test-runner/index.ts';
 import { default as webdriverIo } from './webdriver-io/index.ts';
 import { default as webpack } from './webpack/index.ts';
 import { default as wireit } from './wireit/index.ts';
@@ -336,6 +338,7 @@ export const Plugins = {
   'release-it': releaseIt,
   remark,
   remix,
+  'retry-cli': retryCli,
   rolldown,
   rollup,
   rsbuild,
@@ -400,6 +403,7 @@ export const Plugins = {
   vitepress,
   vitest,
   vue,
+  'web-test-runner': webTestRunner,
   'webdriver-io': webdriverIo,
   webpack,
   wireit,

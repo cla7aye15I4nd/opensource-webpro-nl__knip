@@ -131,6 +131,7 @@ export type PluginName =
   | 'release-it'
   | 'remark'
   | 'remix'
+  | 'retry-cli'
   | 'rolldown'
   | 'rollup'
   | 'rsbuild'
@@ -195,6 +196,7 @@ export type PluginName =
   | 'vitepress'
   | 'vitest'
   | 'vue'
+  | 'web-test-runner'
   | 'webdriver-io'
   | 'webpack'
   | 'wireit'
@@ -337,6 +339,7 @@ export const pluginNames = [
   'release-it',
   'remark',
   'remix',
+  'retry-cli',
   'rolldown',
   'rollup',
   'rsbuild',
@@ -401,6 +404,7 @@ export const pluginNames = [
   'vitepress',
   'vitest',
   'vue',
+  'web-test-runner',
   'webdriver-io',
   'webpack',
   'wireit',
