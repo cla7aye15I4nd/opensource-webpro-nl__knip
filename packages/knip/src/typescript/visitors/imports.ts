@@ -10,7 +10,32 @@ import { IMPORT_FLAGS, IMPORT_STAR, OPAQUE } from '../../constants.ts';
 import { addValue } from '../../util/module-graph.ts';
 import { isInNodeModules } from '../../util/path.ts';
 import { getStringValue, isStringLiteral } from '../ast-nodes.ts';
+import { isShadowedIn } from './shadow.ts';
 import type { WalkState } from './walk.ts';
+
+export function markDynamicNamespaceOpaque(name: string, pos: number, s: WalkState) {
+  const _import = s.localImportMap.get(name);
+  if (!_import?.isDynamicImport || !_import.isNamespace) return;
+  if (isShadowedIn(s, name, pos)) return;
+  const internalImport = s.internal.get(_import.filePath);
+  if (internalImport) addValue(internalImport.import, OPAQUE, s.filePath);
+}
+
+const getBlockScope = (s: WalkState): [number, number] | undefined => {
+  const i = s.scopeDepth - 1;
+  return i < 0 ? undefined : [s.scopeStarts[i], s.scopeEnds[i]];
+};
+
+const setDynamicNamespace = (
+  name: string,
+  filePath: string,
+  scope: [number, number] | undefined,
+  isVar: boolean,
+  s: WalkState
+) => {
+  if (scope && !isVar) s.scopedImports.push({ name, end: scope[1], prev: s.localImportMap.get(name) });
+  s.localImportMap.set(name, { importedName: IMPORT_STAR, filePath, isNamespace: true, isDynamicImport: true, scope });
+};
 
 export function getPromiseAllElements(expression: Expression): ArrayExpression['elements'] | undefined {
   if (
@@ -26,7 +51,7 @@ export function getPromiseAllElements(expression: Expression): ArrayExpression['
   }
 }
 
-export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState) {
+export function handleVariableDeclarator(node: VariableDeclarator, isVar: boolean, s: WalkState) {
   const init = node.init;
   if (!init) return;
   let importExpr: ImportExpression | null = null;
@@ -39,7 +64,15 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
   if (importExpr && isStringLiteral(importExpr.source)) {
     const caughtFlag =
       init.type === 'AwaitExpression' && s.caughtTryBlockEnds.length > 0 ? IMPORT_FLAGS.CAUGHT : IMPORT_FLAGS.NONE;
-    handleDynamicImportBinding(node.id, importExpr, init.type === 'AwaitExpression', caughtFlag, s);
+    handleDynamicImportBinding(
+      node.id,
+      importExpr,
+      init.type === 'AwaitExpression',
+      caughtFlag,
+      getBlockScope(s),
+      isVar,
+      s
+    );
     return;
   }
 
@@ -146,12 +179,7 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
           );
           const resolved = s.resolveModule(specifier, s.filePath);
           if (resolved && !resolved.isExternalLibraryImport && !isInNodeModules(resolved.resolvedFileName)) {
-            s.localImportMap.set(binding.name, {
-              importedName: IMPORT_STAR,
-              filePath: resolved.resolvedFileName,
-              isNamespace: true,
-              isDynamicImport: true,
-            });
+            setDynamicNamespace(binding.name, resolved.resolvedFileName, getBlockScope(s), isVar, s);
           }
         } else {
           s.addImport(
@@ -172,11 +200,15 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
     const registerAlias = (expr: Expression) => {
       if (expr?.type === 'Identifier') {
         const _import = s.localImportMap.get(expr.name);
+        if (_import?.isDynamicImport && isShadowedIn(s, expr.name, expr.start)) return;
         if (_import) {
-          s.addImportAlias(aliasName, expr.name, _import.filePath);
+          s.addImportAlias(aliasName, expr.name, _import);
           if (_import.isNamespace) {
             const internalImport = s.internal.get(_import.filePath);
-            if (internalImport) internalImport.refs.add(expr.name);
+            if (internalImport) {
+              if (_import.isDynamicImport) addValue(internalImport.import, OPAQUE, s.filePath);
+              else internalImport.refs.add(expr.name);
+            }
           }
         }
       }
@@ -192,8 +224,8 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
       for (const prop of init.properties) {
         if (prop.type === 'SpreadElement' && prop.argument?.type === 'Identifier') {
           const _import = s.localImportMap.get(prop.argument.name);
-          if (_import) {
-            s.addImportAlias(aliasName, prop.argument.name, _import.filePath);
+          if (_import && !(_import.isDynamicImport && isShadowedIn(s, prop.argument.name, prop.argument.start))) {
+            s.addImportAlias(aliasName, prop.argument.name, _import);
             if (_import.isNamespace) {
               const internalImport = s.internal.get(_import.filePath);
               if (internalImport) internalImport.refs.add(prop.argument.name);
@@ -208,7 +240,7 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
         ) {
           const nsName = prop.value.name;
           const _import = s.localImportMap.get(nsName);
-          if (_import?.isNamespace) {
+          if (_import?.isNamespace && !(_import.isDynamicImport && isShadowedIn(s, nsName, prop.value.start))) {
             const internalImport = s.internal.get(_import.filePath);
             if (internalImport) internalImport.refs.add(nsName);
             let map = s.nsContainers.get(aliasName);
@@ -216,7 +248,7 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
               map = new Map();
               s.nsContainers.set(aliasName, map);
             }
-            map.set(prop.key.name, nsName);
+            map.set(prop.key.name, { id: nsName, import: _import });
           }
         }
       }
@@ -281,7 +313,7 @@ export function handleVariableDeclarator(node: VariableDeclarator, s: WalkState)
               else internalImport.refs.add(defaultValue.name);
             }
             if (prop.value.left?.type === 'Identifier') {
-              s.addImportAlias(prop.value.left.name, defaultValue.name, _import.filePath);
+              s.addImportAlias(prop.value.left.name, defaultValue.name, _import);
             }
           }
         }
@@ -295,6 +327,8 @@ function handleDynamicImportBinding(
   importExpr: ImportExpression,
   isAwaited: boolean,
   caughtFlag: number,
+  scope: [number, number] | undefined,
+  isVar: boolean,
   s: WalkState
 ) {
   s.handledImportExpressions.add(importExpr.start);
@@ -334,12 +368,7 @@ function handleDynamicImportBinding(
       s.addImport(specifier, 'default', id.name, undefined, importExpr.source.start, IMPORT_FLAGS.DYNAMIC | caughtFlag);
       const resolved = s.resolveModule(specifier, s.filePath);
       if (resolved && !resolved.isExternalLibraryImport && !isInNodeModules(resolved.resolvedFileName)) {
-        s.localImportMap.set(id.name, {
-          importedName: IMPORT_STAR,
-          filePath: resolved.resolvedFileName,
-          isNamespace: true,
-          isDynamicImport: true,
-        });
+        setDynamicNamespace(id.name, resolved.resolvedFileName, scope, isVar, s);
       }
     } else {
       s.addImport(
@@ -372,7 +401,8 @@ export function handleImportThen(node: CallExpression, s: WalkState) {
   const param = fn.params[0];
   if (param?.type !== 'Identifier' && param?.type !== 'ObjectPattern') return;
   const caughtFlag = s.caughtImportExpressions.has(callee.object.start) ? IMPORT_FLAGS.CAUGHT : IMPORT_FLAGS.NONE;
-  handleDynamicImportBinding(param, callee.object, true, caughtFlag, s);
+  const body = fn.body ?? fn;
+  handleDynamicImportBinding(param, callee.object, true, caughtFlag, [body.start, body.end], false, s);
 }
 
 export function handleImportExpression(node: ImportExpression, s: WalkState) {
