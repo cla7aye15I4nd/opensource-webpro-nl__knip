@@ -159,7 +159,7 @@ const resolveConfig: ResolveConfig<NuxtConfig> = async (localConfig, options) =>
   for (const id of localConfig.plugins ?? []) {
     const src = typeof id === 'string' ? id : id?.src;
     if (typeof src === 'string')
-      inputs.push({ ...toDeferResolve(resolveAlias(src, srcDir, cwd), { dir: cwd }), production: true });
+      inputs.push(toDeferResolve(resolveAlias(src, srcDir, cwd), { dir: cwd, production: true }));
   }
 
   addAppEntries(inputs, srcDir, serverDir, localConfig, cwd);
@@ -185,7 +185,7 @@ const resolveConfig: ResolveConfig<NuxtConfig> = async (localConfig, options) =>
     const resolved = isInternal(target) ? toAbsolute(target, cwd) : target;
     const configs = _syncGlob({ cwd: resolved, patterns: config });
     if (configs.length > 0) for (const cfg of configs) inputs.push(toConfig('nuxt', cfg));
-    else inputs.push(toDependency(source));
+    else inputs.push(isInternal(target) ? toDependency(source) : toProductionDependency(source));
   }
 
   for (const layerConfig of findLayerConfigs(cwd)) {

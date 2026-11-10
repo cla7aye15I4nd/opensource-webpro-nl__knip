@@ -48,6 +48,13 @@ if it isn't listed at all. Such a reference is development-only: in [production
 mode][12] the package is still marked as referenced, but an unlisted one is no
 longer reported.
 
+A specifier that is a file path (starting with `./` or `../`, or absolute) is
+resolved as a file instead: Knip adds it as an entry file, or reports it under
+"unresolved imports" if it can't be resolved. For a value that is either a
+package name or a path, such as an item in Prettier's `plugins` option, prefer
+to return [toDeferResolve][6] for a path, with the directory the tool resolves
+it from as `dir`, and `toDependency` for anything else.
+
 ## toProductionDependency
 
 The production `dependency` indicates the entry is a production dependency,
@@ -70,6 +77,11 @@ If this does not lead to a resolution, the specifier will be reported under
 The `deferResolveEntry` input type is similar to `deferResolve`, but it's used
 for entry files only (not dependencies) and unresolved inputs are ignored. It's
 different from `toEntry` as glob patterns are not supported.
+
+A specifier inside `node_modules`, such as `node_modules/pkg/bin.js`, is the
+exception: the tool loads that package rather than a project file, so Knip marks
+the package as referenced, and reports it as an unlisted dependency if it isn't
+listed.
 
 ## toConfig
 
@@ -159,6 +171,18 @@ same path. Project patterns ignore `dir`:
 | `toDeferResolve`, `toDeferResolveEntry`, `toConfig` | `dir`, else the config file's directory | yes         |
 | `toDependency`, `toBinary`                          | not a path                              | yes         |
 | `toAlias`                                           | `dir`, else the workspace directory     | yes         |
+
+### production
+
+Use the `production` flag for an input that is part of the production code, so
+it's kept in [production mode][12]: a resolved file stays an entry file, and an
+unlisted dependency or unresolved import is still reported. The production
+helpers such as [toProductionDependency][5] set it already. For instance, a
+module the build bundles into the application, resolved as a file or a package:
+
+```ts
+toDeferResolve(specifier, { dir: options.cwd, production: true });
+```
 
 ### optional
 

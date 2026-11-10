@@ -60,7 +60,7 @@ const getCoverageInputs = (provider: string, customProviderModule: string | unde
   builtInCoverageProviders.has(provider)
     ? [toDependency(`@vitest/coverage-${provider}`)]
     : customProviderModule
-      ? [{ ...toDeferResolve(customProviderModule), dir }]
+      ? [toDeferResolve(customProviderModule, { dir })]
       : [];
 
 const isProjectConfig = (project: string | VitestProject): project is VitestProjectConfig =>
@@ -76,7 +76,7 @@ const findConfigDependencies = (localConfig: ViteConfig, options: PluginOptions,
     env && env !== 'node' ? (isInternal(env) || isAbsolute(env) ? [toDeferResolve(env)] : [toEnvDependency(env)]) : [];
   const reporters = getExternalReporters(testConfig.reporters).map(specifier =>
     isInternal(specifier) || isAbsolute(specifier)
-      ? { ...toDeferResolve(specifier), dir: vitestRoot }
+      ? toDeferResolve(specifier, { dir: vitestRoot })
       : toDependency(specifier)
   );
 
@@ -87,14 +87,13 @@ const findConfigDependencies = (localConfig: ViteConfig, options: PluginOptions,
 
   const setupFiles = [testConfig.setupFiles ?? []]
     .flat()
-    .map(specifier => ({ ...toDeferResolve(specifier), dir: vitestRoot }));
-  const snapshotSerializers = (testConfig.snapshotSerializers ?? []).map(specifier => ({
-    ...toDeferResolve(specifier),
-    dir: vitestRoot,
-  }));
+    .map(specifier => toDeferResolve(specifier, { dir: vitestRoot }));
+  const snapshotSerializers = (testConfig.snapshotSerializers ?? []).map(specifier =>
+    toDeferResolve(specifier, { dir: vitestRoot })
+  );
   const globalSetup = [testConfig.globalSetup ?? []]
     .flat()
-    .map(specifier => ({ ...toDeferResolve(specifier), dir: vitestRoot }));
+    .map(specifier => toDeferResolve(specifier, { dir: vitestRoot }));
 
   const workspaceDependencies: Input[] = [];
   if (testConfig.workspace !== undefined) {
@@ -298,21 +297,21 @@ const args: Args = {
   alias: { root: ['r'] },
   resolveInputs: (parsed: ParsedArgs, { cwd }) => {
     const inputs: Input[] = [];
+    const root = toAbsolute(parsed['root'] ?? '.', cwd);
     if (parsed['ui']) inputs.push(toDependency('@vitest/ui', { optional: true }));
     if (typeof parsed['coverage'] === 'object' && parsed['coverage'].provider) {
       const { provider, customProviderModule } = parsed['coverage'];
-      inputs.push(...getCoverageInputs(provider, customProviderModule, toAbsolute(parsed['root'] ?? '.', cwd)));
+      inputs.push(...getCoverageInputs(provider, customProviderModule, root));
     } else if (parsed['coverage']) {
       inputs.push(toDependency('@vitest/coverage-v8', { optional: true }));
     }
     if (parsed['reporter']) {
       for (const reporter of getExternalReporters([parsed['reporter']].flat())) {
-        inputs.push(toDependency(reporter));
+        inputs.push(isInternal(reporter) ? toDeferResolve(reporter, { dir: root }) : toDependency(reporter));
       }
     }
-    if (parsed['environment'] && parsed['environment'] !== 'node') {
-      inputs.push(toEnvDependency(parsed['environment']));
-    }
+    const env = parsed['environment'];
+    if (env && env !== 'node') inputs.push(isInternal(env) ? toDeferResolve(env, { dir: root }) : toEnvDependency(env));
     if (typeof parsed['typecheck'] === 'object' && parsed['typecheck'].checker) {
       inputs.push(toDependency(parsed['typecheck'].checker === 'tsc' ? 'typescript' : parsed['typecheck'].checker));
     }

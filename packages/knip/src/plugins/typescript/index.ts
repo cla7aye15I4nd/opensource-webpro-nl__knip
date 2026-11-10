@@ -46,11 +46,9 @@ export const resolveConfig: ResolveConfig<TsConfigJson> = (localConfig, options)
 
   if (!(compilerOptions && localConfig)) return compact([...contentMappers, ...extend, ...references]);
 
-  const jsx = (compilerOptions?.jsxImportSource ? [compilerOptions.jsxImportSource] : []).map(id => ({
-    ...toProductionDependency(id),
-    dir: options.cwd,
-    alsoReferenceOwner: true,
-  }));
+  const jsx = (compilerOptions?.jsxImportSource ? [compilerOptions.jsxImportSource] : []).map(id =>
+    toProductionDependency(id, { dir: options.cwd, alsoReferenceOwner: true })
+  );
 
   const types = compilerOptions.types ?? [];
   const plugins = Array.isArray(compilerOptions?.plugins)
@@ -63,7 +61,8 @@ export const resolveConfig: ResolveConfig<TsConfigJson> = (localConfig, options)
     ...extend,
     ...references,
     ...types.map(id => toDeferResolve(id, { isTypeOnly: true, dir: options.cwd, alsoReferenceOwner: true })),
-    ...[...plugins, ...importHelpers].map(id => toDeferResolve(id, { dir: options.cwd, alsoReferenceOwner: true })),
+    ...plugins.map(id => toDependency(id, { dir: options.cwd, alsoReferenceOwner: true })),
+    ...importHelpers.map(id => toProductionDependency(id, { dir: options.cwd, alsoReferenceOwner: true })),
     ...jsx,
   ]);
 };
