@@ -7,6 +7,7 @@ import type { Plugin } from '../../knip/src/types/config.ts';
 
 const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const referenceDocsDir = path.join(rootDir, 'src/content/docs/reference');
+const pluginDocsDir = path.join(referenceDocsDir, 'plugins');
 const compilersDocsPath = path.join(rootDir, 'src/content/docs/features/compilers.md');
 const knipDir = path.join(rootDir, '../../packages/knip');
 const pluginsDir = path.join(knipDir, 'src/plugins');
@@ -14,6 +15,8 @@ const directories = await fs.opendir(pluginsDir);
 const plugins: Array<[string, string]> = [];
 const compilerPlugins = new Map<string, string[]>();
 const srcBaseUrl = new URL('webpro-nl/knip/blob/main/packages/knip/src/plugins', 'https://github.com');
+// Write only the plugin pages (gitignored), not the plugin list and compilers list (tracked)
+const isPagesOnly = process.argv.includes('--pages-only');
 
 const codeBlock = (value: string, lang = '') => `\`\`\`${lang}\n${value}\n\`\`\``;
 
@@ -138,8 +141,18 @@ for await (const dir of directories) {
         ...generatedBlocks,
       ].join('\n\n') + '\n';
 
-    console.log(`Writing ${pluginName} docs to plugins/${pluginName}.md`);
-    await fs.writeFile(path.join(referenceDocsDir, `plugins/${pluginName}.md`), output);
+    await fs.writeFile(path.join(pluginDocsDir, `${pluginName}.md`), output);
+  }
+}
+
+console.log(`Wrote ${plugins.length} plugin docs to plugins/`);
+
+// Remove docs of plugins that no longer exist (e.g. after switching branches)
+const pluginDocs = new Set(plugins.map(([, pluginName]) => `${pluginName}.md`));
+for (const file of await fs.readdir(pluginDocsDir)) {
+  if (file.endsWith('.md') && !pluginDocs.has(file)) {
+    console.log(`Removing plugins/${file}`);
+    await fs.rm(path.join(pluginDocsDir, file));
   }
 }
 
@@ -158,8 +171,10 @@ const indexBody = [
 
 const indexOutput = `${indexFrontmatter}\n\n${indexBody}\n`;
 
-console.log('Writing plugin list to plugins.md');
-await fs.writeFile(path.join(referenceDocsDir, 'plugins.md'), indexOutput);
+if (!isPagesOnly) {
+  console.log('Writing plugin list to plugins.md');
+  await fs.writeFile(path.join(referenceDocsDir, 'plugins.md'), indexOutput);
+}
 
 const collator = new Intl.Collator('en');
 const compilerEnablers = new Map<string, string[]>();
@@ -187,11 +202,13 @@ const compilersList = tightList(
 );
 const compilersDocs = await fs.readFile(compilersDocsPath, 'utf8');
 
-console.log('Writing compilers list to compilers.md');
-await fs.writeFile(
-  compilersDocsPath,
-  compilersDocs.replace(
-    /(<!-- compilers:start -->\n)[\s\S]*?(\n<!-- compilers:end -->)/,
-    (_, start, end) => `${start}\n${compilersList}\n${end}`
-  )
-);
+if (!isPagesOnly) {
+  console.log('Writing compilers list to compilers.md');
+  await fs.writeFile(
+    compilersDocsPath,
+    compilersDocs.replace(
+      /(<!-- compilers:start -->\n)[\s\S]*?(\n<!-- compilers:end -->)/,
+      (_, start, end) => `${start}\n${compilersList}\n${end}`
+    )
+  );
+}
