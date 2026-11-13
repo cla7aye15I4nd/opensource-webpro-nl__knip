@@ -568,6 +568,14 @@
           "title": "eleventy plugin configuration (https://knip.dev/reference/plugins/eleventy)",
           "$ref": "#/definitions/plugin"
         },
+        "ember": {
+          "title": "ember plugin configuration (https://knip.dev/reference/plugins/ember)",
+          "$ref": "#/definitions/plugin"
+        },
+        "ember-template-lint": {
+          "title": "ember-template-lint plugin configuration (https://knip.dev/reference/plugins/ember-template-lint)",
+          "$ref": "#/definitions/plugin"
+        },
         "esbuild": {
           "title": "esbuild plugin configuration (https://knip.dev/reference/plugins/esbuild)",
           "$ref": "#/definitions/plugin"

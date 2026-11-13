@@ -33,6 +33,8 @@ import { default as drizzle } from './drizzle/index.ts';
 import { default as electronForge } from './electron-forge/index.ts';
 import { default as electronVite } from './electron-vite/index.ts';
 import { default as eleventy } from './eleventy/index.ts';
+import { default as ember } from './ember/index.ts';
+import { default as emberTemplateLint } from './ember-template-lint/index.ts';
 import { default as esbuild } from './esbuild/index.ts';
 import { default as eslint } from './eslint/index.ts';
 import { default as evalite } from './evalite/index.ts';
@@ -243,6 +245,8 @@ export const Plugins = {
   'electron-forge': electronForge,
   'electron-vite': electronVite,
   eleventy,
+  ember,
+  'ember-template-lint': emberTemplateLint,
   esbuild,
   eslint,
   evalite,
