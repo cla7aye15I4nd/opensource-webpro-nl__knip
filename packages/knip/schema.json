@@ -587,6 +587,10 @@
           "title": "ember-template-lint plugin configuration (https://knip.dev/reference/plugins/ember-template-lint)",
           "$ref": "#/definitions/plugin"
         },
+        "env": {
+          "title": "env plugin configuration (https://knip.dev/reference/plugins/env)",
+          "$ref": "#/definitions/plugin"
+        },
         "env-cmd": {
           "title": "env-cmd plugin configuration (https://knip.dev/reference/plugins/env-cmd)",
           "$ref": "#/definitions/plugin"
@@ -629,6 +633,10 @@
         },
         "filesystem-routing": {
           "title": "filesystem-routing plugin configuration (https://knip.dev/reference/plugins/filesystem-routing)",
+          "$ref": "#/definitions/plugin"
+        },
+        "firebase": {
+          "title": "firebase plugin configuration (https://knip.dev/reference/plugins/firebase)",
           "$ref": "#/definitions/plugin"
         },
         "flue": {
@@ -1125,6 +1133,10 @@
         },
         "ts-node": {
           "title": "ts-node plugin configuration (https://knip.dev/reference/plugins/ts-node)",
+          "$ref": "#/definitions/plugin"
+        },
+        "ts-node-dev": {
+          "title": "ts-node-dev plugin configuration (https://knip.dev/reference/plugins/ts-node-dev)",
           "$ref": "#/definitions/plugin"
         },
         "tsd": {

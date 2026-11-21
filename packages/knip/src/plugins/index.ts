@@ -36,6 +36,7 @@ import { default as electronVite } from './electron-vite/index.ts';
 import { default as eleventy } from './eleventy/index.ts';
 import { default as ember } from './ember/index.ts';
 import { default as emberTemplateLint } from './ember-template-lint/index.ts';
+import { default as env } from './env/index.ts';
 import { default as envCmd } from './env-cmd/index.ts';
 import { default as esbuild } from './esbuild/index.ts';
 import { default as eslint } from './eslint/index.ts';
@@ -47,6 +48,7 @@ import { default as expoRouter } from './expo-router/index.ts';
 import { default as expressiveCode } from './expressive-code/index.ts';
 import { default as fast } from './fast/index.ts';
 import { default as filesystemRouting } from './filesystem-routing/index.ts';
+import { default as firebase } from './firebase/index.ts';
 import { default as flue } from './flue/index.ts';
 import { default as fumadocs } from './fumadocs/index.ts';
 import { default as gatsby } from './gatsby/index.ts';
@@ -174,6 +176,7 @@ import { default as textlint } from './textlint/index.ts';
 import { default as travis } from './travis/index.ts';
 import { default as triggerDev } from './trigger-dev/index.ts';
 import { default as tsNode } from './ts-node/index.ts';
+import { default as tsNodeDev } from './ts-node-dev/index.ts';
 import { default as tsd } from './tsd/index.ts';
 import { default as tsdown } from './tsdown/index.ts';
 import { default as tsrs } from './tsrs/index.ts';
@@ -253,6 +256,7 @@ export const Plugins = {
   eleventy,
   ember,
   'ember-template-lint': emberTemplateLint,
+  env,
   'env-cmd': envCmd,
   esbuild,
   eslint,
@@ -264,6 +268,7 @@ export const Plugins = {
   'expressive-code': expressiveCode,
   fast,
   'filesystem-routing': filesystemRouting,
+  firebase,
   flue,
   fumadocs,
   gatsby,
@@ -391,6 +396,7 @@ export const Plugins = {
   travis,
   'trigger-dev': triggerDev,
   'ts-node': tsNode,
+  'ts-node-dev': tsNodeDev,
   tsd,
   tsdown,
   tsrs,
