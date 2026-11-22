@@ -602,6 +602,11 @@ test('getInputsFromScripts ("positionals")', () => {
   t('esbuild --bundle ./main.ts ./worker.ts --outdir=dist', [toBinary('esbuild'), toEntry('./main.ts', { production: true }), toEntry('./worker.ts', { production: true })]);
   t('esbuild --minify --external:react ./main.ts --outdir=dist', [toBinary('esbuild'), toEntry('./main.ts', { production: true })]);
   t('esbuild --bundle "app/javascript/*.*" --outdir=dist', [toBinary('esbuild'), toEntry('app/javascript/*.*', { production: true })]);
+  t('vite-node --watch ./main.ts', [toBinary('vite-node'), ts]);
+  t('vite-node -w ./main.ts', [toBinary('vite-node'), ts]);
+  t('vite-node --inspect ./main.ts', [toBinary('vite-node'), ts]);
+  t('vite-node --script ./main.ts', [toBinary('vite-node'), ts]);
+  t('vite-node ./main.ts build', [toBinary('vite-node'), ts]);
   t('zx --quiet script.js', [toBinary('zx'), toModule('script.js')]);
   t('npx --yes zx --quiet script.js', [toBinary('zx', opt), toModule('script.js')]);
   t('jiti script.js', [toBinary('jiti'), toModule('script.js')]);
@@ -753,14 +758,18 @@ test('getInputsFromScripts (env-cmd environments)', () => {
 });
 
 test('getInputsFromScripts (sst)', () => {
+  const config = toConfig('sst', 'infra/sst.config.ts');
   t('sst deploy --stage production', [toBinary('sst')]);
+  t('sst --config infra/sst.config.ts dev', [toBinary('sst'), config]);
+  t('sst deploy --config infra/sst.config.ts --stage production', [toBinary('sst'), config]);
+  t('sst shell -- vitest --config vitest.e2e.ts', [toBinary('sst'), toBinary('vitest'), toConfig('vitest', 'vitest.e2e.ts')]);
   t('sst shell', [toBinary('sst')]);
   t('sst shell drizzle-kit', [toBinary('sst'), toBinary('drizzle-kit')]);
   t('sst shell "./scripts/my task.sh"', [toBinary('sst'), toEntry('./scripts/my task.sh')]);
   t('sst shell --stage dev -- tsx ./main.ts', [toBinary('sst'), toBinary('tsx'), ts]);
   t('sst shell --stage node node ./script.js', [toBinary('sst'), toBinary('node'), js]);
   t('sst shell -- tsx "./scripts/my task.ts"', [toBinary('sst'), toBinary('tsx'), toEntryPath('./scripts/my task.ts', opt)]);
-  t('sst --config infra/sst.config.ts shell tsx ./main.ts', [toBinary('sst'), toBinary('tsx'), ts]);
+  t('sst --config infra/sst.config.ts shell tsx ./main.ts', [toBinary('sst'), toBinary('tsx'), ts, config]);
   t('sst --stage dev shell -- tsx ./main.ts', [toBinary('sst'), toBinary('tsx'), ts]);
   t('sst dev next dev', [toBinary('sst'), toBinary('next')]);
   t('sst dev -- tsx "./scripts/my task.ts"', [toBinary('sst'), toBinary('tsx'), toEntryPath('./scripts/my task.ts', opt)]);
