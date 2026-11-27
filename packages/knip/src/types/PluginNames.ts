@@ -141,6 +141,7 @@ export type PluginName =
   | 'release-it'
   | 'remark'
   | 'remix'
+  | 'remotion'
   | 'retry-cli'
   | 'rolldown'
   | 'rollup'
@@ -148,6 +149,7 @@ export type PluginName =
   | 'rslib'
   | 'rslint'
   | 'rspack'
+  | 'rspress'
   | 'rstest'
   | 'sanity'
   | 'semantic-release'
@@ -364,6 +366,7 @@ export const pluginNames = [
   'release-it',
   'remark',
   'remix',
+  'remotion',
   'retry-cli',
   'rolldown',
   'rollup',
@@ -371,6 +374,7 @@ export const pluginNames = [
   'rslib',
   'rslint',
   'rspack',
+  'rspress',
   'rstest',
   'sanity',
   'semantic-release',
